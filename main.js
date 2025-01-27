@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const session = require('express-session');
 const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
 
 const app = express();
 
@@ -14,7 +15,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// 세션 설정 (쿠키 대신 사용... 일단 쿠키 지웠어...!)
+// 세션 설정 (쿠키 대신 사용)
 app.use(session({
     secret: 'your_secret_key',
     resave: false,
@@ -27,6 +28,24 @@ app.use(session({
 
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
+
+//데이터 베이스 연결
+mongoose.connect('mongodb://localhost/writing_database', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log(err));
+
+const userSchema = new mongoose.Schema({
+    username: String,
+    password: String
+});
+
+const User = mongoose.model('User', userSchema);
+
+module.exports = User;
+//
 
 const USERS_JSON_FILENAME = 'users.json';
 
@@ -74,10 +93,50 @@ app.get('/plantowner', (req, res) => {
     res.render('plantowner');
 });
 
-app.get('/community', (req, res) => {
-    res.render('community');
+// 기본 커뮤니티방은 자유 게시판
+app.get('/plantowner/community', (req, res) => {
+    res.redirect('/plantowner/community/free');
 });
 
+// 특정 게시판 페이지
+app.get('/plantowner/community/:boardId', (req, res) => {
+    const boardId = req.params.boardId;
+    let boardName;
+    
+    switch(boardId) {
+        case 'free':
+            boardName = '자유게시판';
+            break;
+        case 'plant':
+            boardName = '식물 토크';
+            break;
+        case 'event':
+            boardName = '이벤트';
+            break;
+        default:
+            return res.status(404).send('게시판을 찾을 수 없습니다.');
+        }
+    
+        // 여기서 해당 게시판의 게시글 목록을 가져오는 로직을 구현해야 합니다.
+        // 예: const posts = getPosts(boardId);
+        
+        res.render('community', { boardId, boardName, posts: [] });
+    });
+
+// 게시글 페이지네이션
+app.get('/plantowner/community/:boardId/posts', (req, res) => {
+    const boardId = req.params.boardId;
+    const page = parseInt(req.query.page) || 1;
+    
+    // 여기서 페이지네이션된 게시글 목록을 가져오는 로직을 구현해야 합니다.
+    // 예: const posts = getPagedPosts(boardId, page);
+    
+    res.render('community', { boardId, page, posts: [] });
+});
+
+
+
+// 마이페이지: 로그인이 안 되어있다면 로그인 창으로 바로 이동. 그 외에는 마이페이지로 이동.
 app.get('/mypage', (req, res) => {
     if (!req.session.user) {
         return res.redirect('/');
