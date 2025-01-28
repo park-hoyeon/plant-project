@@ -18,8 +18,19 @@ html
 
     // 세 번째 줄: 내용
     div.content
-      h2 내용
       p= post.content
+
+// 이전/다음 버튼
+div.navigation
+  if prevPostId
+    a(href=`/plantowner/community/${boardId}/${prevPostId}`) 이전 글
+  else
+    span 이전 글이 없습니다
+
+  if nextPostId
+    a(href=`/plantowner/community/${boardId}/${nextPostId}`) 다음 글
+  else
+    span 다음 글이 없습니다
 
     // 게시판으로 돌아가기 버튼
     a(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기
