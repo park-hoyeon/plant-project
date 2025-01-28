@@ -1,0 +1,54 @@
+extends layout
+
+block content
+  h1 글 작성
+  form#writeForm(action="/plantowner/community/post" method="POST")
+    input(type="hidden" name="boardId" value=boardId)
+    div
+        select(name="tag" required)
+            each tag in tags
+                option(value=tag)= tag
+    div
+        label(for="title") 제목:
+        input#title(type="text" name="title" required)
+    div
+        label(for="content") 내용:
+        textarea#content(name="content" required)
+    button(type="submit") 작성 완료
+    button#saveAsDraft(type="button") 임시저장
+  button#loadDrafts(type="button") 임시저장 목록
+
+block scripts
+  script.
+    document.getElementById('writeForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch(this.action, {
+        method: 'POST',
+        body: new FormData(this),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/plantowner/community/' + '#{boardId}';
+          // 페이지 새로고침을 강제로 수행
+          window.location.reload(true);
+        } else {
+          throw new Error(data.error || '게시글 저장에 실패했습니다.');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert(error.message);
+      });
+    });
+
+    document.getElementById('saveAsDraft').addEventListener('click', function() {
+      const title = document.getElementById('title').value;
+      const content = document.getElementById('content').value;
+      localStorage.setItem('draft', JSON.stringify({title, content}));
+      alert('임시저장되었습니다.');
+    });
+
+    document.getElementById('loadDrafts').addEventListener('click', function() {
+      window.location.href = '/plantowner/community/drafts';
+    });

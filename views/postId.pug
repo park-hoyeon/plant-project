@@ -1,0 +1,25 @@
+html
+  head
+    title #{post.title} - 게시글 상세보기
+  body
+    h1 게시글 상세보기
+
+    // 첫 번째 줄: 태그, 제목, 조회수, 공감수
+    p 
+      span 태그: #{post.tag} |
+      span 제목: #{post.title} |
+      span 조회수: #{post.views} |
+      span 공감수: #{post.likes}
+
+    // 두 번째 줄: 작성자와 작성일
+    p 
+      span 작성자: #{post.author} |
+      span 작성일: #{post.createdAt}
+
+    // 세 번째 줄: 내용
+    div.content
+      h2 내용
+      p= post.content
+
+    // 게시판으로 돌아가기 버튼
+    a(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기

@@ -1,0 +1,22 @@
+extends layout
+
+block content
+  h1 임시저장 목록
+  ul#draftList
+  
+  a(href="/plantowner/community/#{boardId}/write") 새 글 작성
+
+block scripts
+  script.
+    const draftList = document.getElementById('draftList');
+    const draft = JSON.parse(localStorage.getItem('draft'));
+    if (draft) {
+      const li = document.createElement('li');
+      li.textContent = draft.title;
+      li.addEventListener('click', function() {
+        window.location.href = '/plantowner/community/#{boardId}/write?loadDraft=true';
+      });
+      draftList.appendChild(li);
+    } else {
+      draftList.innerHTML = '<li>임시저장된 글이 없습니다.</li>';
+    }

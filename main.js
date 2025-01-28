@@ -4,9 +4,9 @@ const path = require('path');
 const fs = require('fs').promises;
 const session = require('express-session');
 const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
 
 const app = express();
+app.use(express.static('public'));
 
 // 미들웨어 설정
 app.use(cors());
@@ -29,24 +29,6 @@ app.use(session({
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
-//데이터 베이스 연결
-mongoose.connect('mongodb://localhost/writing_database', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log("MongoDB Connected"))
-.catch(err => console.log(err));
-
-const userSchema = new mongoose.Schema({
-    username: String,
-    password: String
-});
-
-const User = mongoose.model('User', userSchema);
-
-module.exports = User;
-//
-
 const USERS_JSON_FILENAME = 'users.json';
 
 // 사용자 관련 함수들
@@ -62,6 +44,10 @@ async function fetchAllUsers() {
         throw error;
     }
 }
+
+// 커뮤니티 글 상세 보기 루트
+const postRouter = require('./community/postId');
+app.use('/plantowner/community', postRouter);
 
 async function fetchUser(ID) {
     const users = await fetchAllUsers();
@@ -92,6 +78,10 @@ async function updateUserPassword(ID, newPassword) {
 app.get('/plantowner', (req, res) => {
     res.render('plantowner');
 });
+
+// 글 작성으로 이동
+const writeRouter = require('./community/realwrite');
+app.use('/plantowner/community', writeRouter);
 
 // 기본 커뮤니티방은 자유 게시판
 app.get('/plantowner/community', (req, res) => {
