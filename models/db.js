@@ -10,6 +10,7 @@ const db = new sqlite3.Database('./community.db', (err) => {
     }
 });
 
+
 function createTables() {
     db.serialize(() => {
         // 자유게시판 테이블

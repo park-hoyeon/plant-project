@@ -1,36 +1,41 @@
-html
-  head
-    title #{post.title} - 게시글 상세보기
-  body
-    h1 게시글 상세보기
+extends layout
 
-    // 첫 번째 줄: 태그, 제목, 조회수, 공감수
-    p 
-      span 태그: #{post.tag} |
-      span 제목: #{post.title} |
-      span 조회수: #{post.views} |
-      span 공감수: #{post.likes}
+block content
+  h1 게시글 상세보기
 
-    // 두 번째 줄: 작성자와 작성일
-    p 
-      span 작성자: #{post.author} |
-      span 작성일: #{post.createdAt}
+  // 첫 번째 줄: 태그, 제목, 조회수, 공감수
+  p 
+    span 태그: #{post.tag} |
+    span 제목: #{post.title} |
+    span 조회수: #{post.views} |
+    span 공감수: #{post.likes}
 
-// 세 번째 줄: 내용
-div.content
-  p!= post.content
+  // 두 번째 줄: 작성자와 작성일
+  p 
+    span 작성자: #{post.author} |
+    span 작성일: #{post.createdAt}
 
-// 이전/다음 버튼
-div.navigation
-  if prevPostId
-    a(href=`/plantowner/community/${boardId}/${prevPostId}`) 이전 글
-  else
-    span 이전 글이 없습니다
+  // 세 번째 줄: 내용
+  div.content
+    p!= post.content
 
-  if nextPostId
-    a(href=`/plantowner/community/${boardId}/${nextPostId}`) 다음 글
-  else
-    span 다음 글이 없습니다
+  // 이전/다음 버튼
+  div.navigation
+    if prevPostId
+      a(href=`/plantowner/community/${boardId}/${prevPostId}`) 이전 글
+    else
+      span 이전 글이 없습니다
 
-    // 게시판으로 돌아가기 버튼
-    a(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기
+    if nextPostId
+      a(href=`/plantowner/community/${boardId}/${nextPostId}`) 다음 글
+    else
+      span 다음 글이 없습니다
+
+  // 게시판으로 돌아가기 버튼
+  a(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기
+
+  // 댓글 섹션
+  include comment
+
+block scripts
+  script(src='/js/comment.js')

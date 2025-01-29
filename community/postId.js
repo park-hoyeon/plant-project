@@ -51,15 +51,31 @@ router.get('/:boardId/:id', (req, res) => {
         if (userId !== 'anonymous') {
           updateViewCount(userId, currentId, boardId);
         }
-  
-        res.render('postId', { 
-          post, 
-          boardId,
-          prevPostId: prevNext.prevId,
-          nextPostId: prevNext.nextId,
-          user: req.session.user
+
+            // 댓글 조회 쿼리 수정
+            const sqlComments = `
+                SELECT *
+                FROM comments
+                WHERE post_id = ?
+                ORDER BY created_at DESC
+            `;
+
+            db.all(sqlComments, [currentId], (err, comments) => {
+                if (err) {
+                    console.error('댓글 조회 오류:', err);
+                    return res.status(500).send('서버 오류가 발생했습니다.');
+                }
+
+                res.render('postId', { 
+                    post, 
+                    boardId,
+                    prevPostId: prevNext.prevId,
+                    nextPostId: prevNext.nextId,
+                    user: req.session.user,
+                    comments: comments // 댓글 데이터 추가
+                });
+            });
         });
-      });
     });
 });
 
@@ -67,7 +83,7 @@ function updateViewCount(userId, postId, boardId) {
   const now = Date.now();
   const cacheKey = `${userId}:${boardId}:${postId}`;
   
-  if (!viewCache[cacheKey] || now - viewCache[cacheKey] >= 5 * 60 * 1000) { // 5분 제한
+  if (!viewCache[cacheKey] || now - viewCache[cacheKey] >= 60 * 60 * 1000) { // 1시간 제한
     viewCache[cacheKey] = now;
     
     const incrementViewsSql = `UPDATE ${boardId}_posts SET views = views + 1 WHERE id = ?`;
@@ -76,11 +92,11 @@ function updateViewCount(userId, postId, boardId) {
       if (err) {
         console.error('조회수 증가 오류:', err);
       } else {
-        console.log(`조회수 업데이트 성공. 변경된 행 수: ${this.changes}`);
+        console.log(`조회수 업데이트 성공.`);
       }
     });
   } else {
-    console.log('5분 내 재조회로 조회수가 증가하지 않았습니다.');
+    console.log('1시간 내 재조회로 조회수가 증가하지 않았습니다.');
   }
 }
 
