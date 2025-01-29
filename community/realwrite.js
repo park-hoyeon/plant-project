@@ -61,7 +61,7 @@ const boardTags = {
     'event': ['이벤트']
 };
 
-// 로그인 확인 미들웨어 (변경 없음)
+// 로그인 확인 미들웨어
 const isLoggedIn = (req, res, next) => {
     if (req.session && req.session.user) {
         next();
@@ -98,6 +98,9 @@ router.get('/:boardId', (req, res) => {
 // 글 작성 페이지 렌더링 (로그인 필요)
 router.get('/:boardId/write', isLoggedIn, (req, res) => {
     const { boardId } = req.params;
+    if (!boardNames[boardId]) {
+        return res.status(404).send('유효하지 않은 게시판입니다.');
+    }
     res.render('realwrite', { 
         boardId, 
         boardName: boardNames[boardId],
@@ -106,13 +109,18 @@ router.get('/:boardId/write', isLoggedIn, (req, res) => {
     });
 });
 
+
 // 글 작성 처리 (로그인 필요)
-router.post('/post', isLoggedIn, (req, res) => {
-    const { boardId, title, content, tag } = req.body;
+router.post('/:boardId/post', isLoggedIn, (req, res) => {
+    const { boardId } = req.params;
+    let { title, content, tag } = req.body;
 
     if (!boardTags[boardId].includes(tag)) {
         return res.status(400).send('유효하지 않은 태그입니다.');
     }
+
+    // 줄바꿈을 <br> 태그로 변환
+    content = content.replace(/\r\n|\r|\n/g, '<br>');
 
     const author = req.session.user.nickname;
     const tableName = `${boardId}_posts`;
@@ -127,6 +135,7 @@ router.post('/post', isLoggedIn, (req, res) => {
         res.redirect(`/plantowner/community/${boardId}`);
     });
 });
+
 
 
 // 임시저장 목록 페이지 렌더링 (로그인 필요)

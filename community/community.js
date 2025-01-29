@@ -118,31 +118,29 @@ router.get("/:boardId", async (req, res) => {
 });
 
 
-
-
-// 게시글 상세 조회
-router.get('/:boardId/:postId', (req, res) => {
-    const { boardId, postId } = req.params;
-    const tableName = `${boardId}_posts`;
+// // 게시글 상세 조회
+// router.get('/:boardId/:postId', (req, res) => {
+//     const { boardId, postId } = req.params;
+//     const tableName = `${boardId}_posts`;
     
-    db.get(`SELECT *, id AS board_specific_id FROM ${tableName} WHERE id = ?`, [postId], (err, post) => {
-        if (err) {
-            console.error('게시글 조회 오류:', err);
-            return res.status(500).send('서버 오류가 발생했습니다.');
-        }
-        if (!post) {
-            return res.status(404).send('게시글을 찾을 수 없습니다.');
-        }
+//     db.get(`SELECT *, id AS board_specific_id FROM ${tableName} WHERE id = ?`, [postId], (err, post) => {
+//         if (err) {
+//             console.error('게시글 조회 오류:', err);
+//             return res.status(500).send('서버 오류가 발생했습니다.');
+//         }
+//         if (!post) {
+//             return res.status(404).send('게시글을 찾을 수 없습니다.');
+//         }
         
-        // 조회수 증가
-        db.run(`UPDATE ${tableName} SET views = views + 1 WHERE id = ?`, [postId], (err) => {
-            if (err) {
-                console.error('조회수 업데이트 오류:', err);
-            }
-            res.render('post', { post, boardName: boardNames[boardId] });
-        });
-    });
-});
+//         // 조회수 증가
+//         db.run(`UPDATE ${tableName} SET views = views + 1 WHERE id = ?`, [postId], (err) => {
+//             if (err) {
+//                 console.error('조회수 업데이트 오류:', err);
+//             }
+//             res.render('post', { post, boardName: boardNames[boardId] });
+//         });
+//     });
+// });
 
 // 새 게시글 작성 처리
 router.post('/post', (req, res) => {

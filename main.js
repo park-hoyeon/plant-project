@@ -45,6 +45,10 @@ async function fetchAllUsers() {
     }
 }
 
+// 글 작성으로 이동
+const realwriteRouter = require('./community/realwrite');
+app.use('/plantowner/community', realwriteRouter);
+
 // 커뮤니티 글 상세 보기 루트
 const postRouter = require('./community/postId');
 app.use('/plantowner/community', postRouter);
@@ -79,10 +83,6 @@ app.get('/plantowner', (req, res) => {
     res.render('plantowner');
 });
 
-// 글 작성으로 이동
-const writeRouter = require('./community/realwrite');
-app.use('/plantowner/community', writeRouter);
-
 // 기본 커뮤니티방은 자유 게시판
 app.get('/plantowner/community', (req, res) => {
     res.redirect('/plantowner/community/free');
@@ -106,9 +106,6 @@ app.get('/plantowner/community/:boardId', (req, res) => {
         default:
             return res.status(404).send('게시판을 찾을 수 없습니다.');
         }
-    
-        // 여기서 해당 게시판의 게시글 목록을 가져오는 로직을 구현해야 합니다.
-        // 예: const posts = getPosts(boardId);
         
         res.render('community', { boardId, boardName, posts: [] });
     });
@@ -117,9 +114,6 @@ app.get('/plantowner/community/:boardId', (req, res) => {
 app.get('/plantowner/community/:boardId/posts', (req, res) => {
     const boardId = req.params.boardId;
     const page = parseInt(req.query.page) || 1;
-    
-    // 여기서 페이지네이션된 게시글 목록을 가져오는 로직을 구현해야 합니다.
-    // 예: const posts = getPagedPosts(boardId, page);
     
     res.render('community', { boardId, page, posts: [] });
 });

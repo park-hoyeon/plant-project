@@ -16,9 +16,9 @@ html
       span 작성자: #{post.author} |
       span 작성일: #{post.createdAt}
 
-    // 세 번째 줄: 내용
-    div.content
-      p= post.content
+// 세 번째 줄: 내용
+div.content
+  p!= post.content
 
 // 이전/다음 버튼
 div.navigation
