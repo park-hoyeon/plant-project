@@ -1,11 +1,13 @@
 let isSubmitting = false;
+let isLoggedIn = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const commentForm = document.getElementById('comment-form');
-  const commentsList = document.getElementById('comments-list');
-
-  // 페이지 로드 시 댓글 불러오기
-  await loadComments();
+    const commentForm = document.getElementById('comment-form');
+    const commentsList = document.getElementById('comments-list');
+  
+    // 페이지 로드 시 댓글 불러오기
+    await loadComments();
+  
 
   if (commentForm) {
     commentForm.addEventListener('submit', async function (e) {
@@ -59,11 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const response = await fetch(`/api/comments?postId=${postId}`);
       if (response.ok) {
-        const comments = await response.json();
-
+        const data = await response.json();
+        isLoggedIn = data.isLoggedIn; // 서버에서 받은 로그인 상태 저장
+        console.log('로그인 상태:', isLoggedIn); // 디버깅을 위해 로그 추가
+        const comments = data.comments;
+  
         // 댓글 리스트 초기화
         commentsList.innerHTML = '';
-
+  
         // 루트 댓글부터 DOM에 추가
         comments.forEach(comment => addCommentToDOM(comment, commentsList));
       } else {
@@ -73,6 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('댓글 로드 중 오류 발생:', error);
     }
   }
+  
 
   function addCommentToDOM(comment, parentElement) {
     if (!parentElement) {
@@ -115,12 +121,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   
     // 답글 버튼 이벤트 리스너 추가
     const replyButton = commentElement.querySelector('.reply-button');
-    replyButton.addEventListener('click', () => showReplyForm(comment.id));
+    replyButton.addEventListener('click', () => {
+      if (!isLoggedIn) {
+        alert('답글을 작성하려면 로그인이 필요합니다.');
+        window.location.href = '/';
+        return;
+      }
+      showReplyForm(comment.id);
+    });
 
     function showReplyForm(parentId) {
         const parentCommentEl = document.querySelector(`[data-comment-id="${parentId}"]`);
         if (!parentCommentEl) return;
-      
+    
         let replyForm = parentCommentEl.querySelector('.reply-form');
         if (!replyForm) {
           replyForm = document.createElement('form');
@@ -129,25 +142,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             <textarea name="content" placeholder="답글을 입력하세요" required></textarea>
             <button type="submit">답글 작성</button>
           `;
-      
+    
           replyForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             
             const content = replyForm.querySelector('textarea[name="content"]').value;
             const postId = window.location.pathname.split('/').pop();
-      
+    
             try {
               const response = await fetch('/api/comments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content, postId, parentId }),
               });
-      
+    
               if (response.ok) {
                 const newReply = await response.json();
                 const repliesContainer = parentCommentEl.querySelector('.replies');
                 addCommentToDOM(newReply, repliesContainer);
                 replyForm.remove();
+              } else if (response.status === 401) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/';
               } else {
                 console.error('답글 작성 실패');
               }
@@ -155,7 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               console.error('답글 작성 중 오류 발생:', error);
             }
           });
-      
+    
           parentCommentEl.appendChild(replyForm);
         } else {
           replyForm.remove();
@@ -210,16 +226,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function handleLike(commentId) {
     try {
       const response = await fetch(`/api/comments/${commentId}/like`, { method: 'POST' });
+  
       if (response.ok) {
         const data = await response.json();
         const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
         const likesCountElement = commentElement.querySelector('.likes-count');
+  
+        // 좋아요 상태에 따라 메시지 표시
+        if (data.liked) {
+          alert('좋아요를 눌렀습니다.');
+        } else {
+          alert('좋아요를 취소했습니다.');
+        }
+  
+        // 업데이트된 좋아요 수 반영
         likesCountElement.textContent = data.likes;
-      } else {
-        console.error('좋아요 업데이트 실패');
+      } else if (response.status === 401) {
+        alert('로그인이 필요합니다.');
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('좋아요 처리 중 오류 발생:', error);
     }
   }
-});
+})

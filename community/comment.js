@@ -58,9 +58,11 @@ module.exports = (db) => {
     });
   });
 
+  // 댓글 조회
   router.get('/', (req, res) => {
     const postId = req.query.postId;
     const userId = req.session?.user?.ID || null;
+    const isLoggedIn = !!userId;
   
     const sql = `
       SELECT c.*, 
@@ -99,39 +101,81 @@ module.exports = (db) => {
         }
       });
   
-      res.json(rootComments);
+      res.json({
+        comments: rootComments,
+        isLoggedIn: isLoggedIn
+      });
     });
   });
   
 
-  // 좋아요 기능
-  router.post('/:id/like', (req, res) => {
-    const commentId = req.params.id;
 
-    db.get('SELECT likes FROM comments WHERE id = ?', [commentId], (err, row) => {
+// 좋아요 기능
+router.post('/:id/like', (req, res) => {
+  const commentId = req.params.id;
+  const userId = req.session?.user?.ID;
+
+  if (!userId) {
+    return res.status(401).json({ error: '로그인이 필요합니다.' });
+  }
+
+  db.serialize(() => {
+    // 댓글에서 좋아요를 누른 사용자 목록 가져오기
+    const getLikesSql = `
+      SELECT likes, liked_users FROM comments WHERE id = ?
+    `;
+
+    db.get(getLikesSql, [commentId], (err, row) => {
       if (err) {
-        console.error('댓글 조회 오류:', err.message);
-        return res.status(500).json({ error: '댓글 조회 중 오류가 발생했습니다.' });
+        console.error('좋아요 상태 확인 오류:', err.message);
+        return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
       }
 
       if (!row) {
         return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
       }
 
-      const currentLikes = row.likes || 0;
-      const newLikes = currentLikes % 2 === 0 ? currentLikes + 1 : currentLikes - 1;
+      let likedUsers = row.liked_users ? JSON.parse(row.liked_users) : []; // liked_users는 JSON 문자열로 저장
+      const isLiked = likedUsers.includes(userId);
 
-      db.run('UPDATE comments SET likes = ? WHERE id = ?', [newLikes, commentId], function (err) {
-        if (err) {
-          console.error('좋아요 업데이트 오류:', err.message);
-          return res.status(500).json({ error: '좋아요 업데이트 중 오류가 발생했습니다.' });
-        }
+      if (isLiked) {
+        // 이미 좋아요를 눌렀다면 -> 좋아요 취소
+        likedUsers = likedUsers.filter(id => id !== userId); // 사용자 ID 제거
 
-        res.json({ likes: newLikes });
-      });
+        const updateLikesSql = `
+          UPDATE comments SET likes = likes - 1, liked_users = ? WHERE id = ?
+        `;
+
+        db.run(updateLikesSql, [JSON.stringify(likedUsers), commentId], function (err) {
+          if (err) {
+            console.error('좋아요 취소 오류:', err.message);
+            return res.status(500).json({ error: '좋아요 취소 중 오류가 발생했습니다.' });
+          }
+
+          res.json({ message: '좋아요가 취소되었습니다.', likes: row.likes - 1, liked: false });
+        });
+      } else {
+        // 아직 좋아요를 누르지 않았다면 -> 좋아요 추가
+        likedUsers.push(userId);
+
+        const updateLikesSql = `
+          UPDATE comments SET likes = likes + 1, liked_users = ? WHERE id = ?
+        `;
+
+        db.run(updateLikesSql, [JSON.stringify(likedUsers), commentId], function (err) {
+          if (err) {
+            console.error('좋아요 추가 오류:', err.message);
+            return res.status(500).json({ error: '좋아요 추가 중 오류가 발생했습니다.' });
+          }
+
+          res.json({ message: '좋아요가 추가되었습니다.', likes: row.likes + 1, liked: true });
+        });
+      }
     });
   });
+});
 
+  // 댓글 삭제
   router.post('/:id/delete', (req, res) => {
     const commentId = req.params.id;
     const userId = req.session?.user?.ID;
@@ -159,7 +203,6 @@ module.exports = (db) => {
       res.json({ message: '댓글이 삭제되었습니다.' });
     });
   });
-  
 
   return router;
 };
