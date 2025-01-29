@@ -51,16 +51,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-    function addCommentToDOM(comment) {
-      const commentElement = document.createElement('div');
-      commentElement.className = 'comment';
-      commentElement.innerHTML = `
-        <p class="comment-content">${comment.content}</p>
-        <p class="comment-author">${comment.author}</p>
-        <p class="comment-date">${new Date(comment.created_at).toLocaleString()}</p>
-        <p class="comment-likes">좋아요: ${comment.likes}</p>
-      `;
-      commentsList.prepend(commentElement);
-    }
+  function addCommentToDOM(comment) {
+    const commentElement = document.createElement('div');
+    commentElement.className = 'comment';
+    
+    // 댓글 내용의 줄바꿈(\n)을 <br> 태그로 변환
+    const formattedContent = comment.content.replace(/\n/g, '<br>');
+    
+    commentElement.innerHTML = `
+      <p class="comment-header">
+        <span class="comment-author">${comment.author}</span> |
+        <span class="comment-date">${new Date(comment.created_at).toLocaleString()}</span> |
+        <span class="comment-likes">좋아요: ${comment.likes}</span>
+      </p>
+      <p class="comment-content">
+        ${formattedContent}
+      </p>
+    `;
+    commentsList.prepend(commentElement);
+  }
+  
   });
   
