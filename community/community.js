@@ -77,33 +77,33 @@ const boardTags = {
 
 router.get("/:boardId", async (req, res) => {
     const boardId = req.params.boardId;
-    const currentPage = parseInt(req.query.page) || 1;  // 현재 페이지 (기본값 1)
-    const searchQuery = req.query.query || "";  // 검색어
-    const itemsPerPage = 10;  // 페이지당 게시글 수
-    const offset = (currentPage - 1) * itemsPerPage; // OFFSET 계산
+    const currentPage = parseInt(req.query.page) || 1;
+    const searchQuery = req.query.query || "";
+    const itemsPerPage = 10;
+    const offset = (currentPage - 1) * itemsPerPage;
 
     try {
         // 전체 게시글 개수 조회
-        const countQuery = "SELECT COUNT(*) AS total FROM posts WHERE boardId = ?";
+        const countQuery = `SELECT COUNT(*) AS total FROM ${boardId}_posts`;
         const totalCount = await new Promise((resolve, reject) => {
-            db.get(countQuery, [boardId], (err, row) => {
+            db.get(countQuery, [], (err, row) => {
                 if (err) reject(err);
                 else resolve(row.total);
             });
         });
 
-        // 게시글 목록 조회 (10개씩 페이징)
-        const query = `SELECT * FROM posts WHERE boardId = ? ORDER BY id DESC LIMIT ? OFFSET ?`;
-        db.all(query, [boardId, itemsPerPage, offset], (err, posts) => {
+        // 게시글 목록 조회
+        const query = `SELECT * FROM ${boardId}_posts ORDER BY id DESC LIMIT ? OFFSET ?`;
+        db.all(query, [itemsPerPage, offset], (err, posts) => {
             if (err) {
                 console.error("❌ DB 조회 오류:", err);
                 return res.status(500).send("게시글을 불러오는 중 오류 발생");
             }
 
-            const totalPages = Math.ceil(totalCount / itemsPerPage); // 전체 페이지 수
+            const totalPages = Math.ceil(totalCount / itemsPerPage);
 
             res.render("community", {
-                boardName: getBoardName(boardId),
+                boardName: boardNames[boardId],
                 boardId,
                 posts,
                 currentPage,
@@ -115,83 +115,6 @@ router.get("/:boardId", async (req, res) => {
         console.error("❌ 페이지네이션 오류:", err);
         res.status(500).send("페이지네이션 중 오류 발생");
     }
-});
-
-
-// // 게시글 상세 조회
-// router.get('/:boardId/:postId', (req, res) => {
-//     const { boardId, postId } = req.params;
-//     const tableName = `${boardId}_posts`;
-    
-//     db.get(`SELECT *, id AS board_specific_id FROM ${tableName} WHERE id = ?`, [postId], (err, post) => {
-//         if (err) {
-//             console.error('게시글 조회 오류:', err);
-//             return res.status(500).send('서버 오류가 발생했습니다.');
-//         }
-//         if (!post) {
-//             return res.status(404).send('게시글을 찾을 수 없습니다.');
-//         }
-        
-//         // 조회수 증가
-//         db.run(`UPDATE ${tableName} SET views = views + 1 WHERE id = ?`, [postId], (err) => {
-//             if (err) {
-//                 console.error('조회수 업데이트 오류:', err);
-//             }
-//             res.render('post', { post, boardName: boardNames[boardId] });
-//         });
-//     });
-// });
-
-// 새 게시글 작성 처리
-router.post('/post', (req, res) => {
-    const { boardId, title, content, tag } = req.body;
-    const author = req.session.user.nickname;
-    const tableName = `${boardId}_posts`;
-
-    const sql = `INSERT INTO ${tableName} (title, content, author, tag) VALUES (?, ?, ?, ?)`;
-    db.run(sql, [title, content, author, tag], function(err) {
-        if (err) {
-            console.error('게시글 저장 오류:', err);
-            return res.status(500).send('게시글 저장 중 오류가 발생했습니다.');
-        }
-        console.log('새 게시글이 저장되었습니다. ID:', this.lastID);
-        res.redirect(`/plantowner/community/${boardId}`);
-    });
-});
-
-// 게시글 수정 처리
-router.put('/post/:boardId/:postId', (req, res) => {
-    const { boardId, postId } = req.params;
-    const { title, content } = req.body;
-    
-    const tableName = `${boardId}_posts`;
-    
-    const sql = `UPDATE ${tableName} SET title = ?, content = ? WHERE id = ?`;
-    
-    db.run(sql, [title, content, postId], (err) => {
-        if (err) {
-            console.error('게시글 수정 오류:', err);
-            return res.status(500).send('게시글 수정 중 오류가 발생했습니다.');
-        }
-        
-        res.json({ success: true });
-    });
-});
-
-// 게시글 삭제 처리
-router.delete('/post/:boardId/:postId', (req, res) => {
-    const { boardId, postId } = req.params;
-    
-    const tableName = `${boardId}_posts`;
-    
-    db.run(`DELETE FROM ${tableName} WHERE id = ?`, [postId], (err) => {
-        if (err) {
-            console.error('게시글 삭제 오류:', err);
-            return res.status(500).send('게시글 삭제 중 오류가 발생했습니다.');
-        }
-        
-        res.json({ success: true });
-    });
 });
 
 module.exports = router;

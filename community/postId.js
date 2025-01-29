@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
-const dbPath = './community.db'; // 데이터베이스 파일 경로
+
+const dbPath = './community.db';
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('SQLite 데이터베이스 연결 오류:', err.message);
@@ -10,11 +12,13 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
+// 조회 기록을 저장할 객체
+const viewCache = {};
 
 router.get('/:boardId/:id', (req, res) => {
     const { boardId, id } = req.params;
     const currentId = parseInt(id);
-    const userId = req.session.user ? req.session.user.id : null;
+    const userId = req.session.user ? req.session.user.id : 'anonymous';
   
     // 현재 게시글 조회
     const sqlCurrent = `SELECT * FROM ${boardId}_posts WHERE id = ?`;
@@ -44,33 +48,8 @@ router.get('/:boardId/:id', (req, res) => {
         }
   
         // 로그인한 사용자만 조회수 증가
-        if (userId) {
-          const checkViewSql = `
-            SELECT viewed_at FROM user_views 
-            WHERE user_id = ? AND post_id = ? AND board_id = ?
-          `;
-          db.get(checkViewSql, [userId, currentId, boardId], (err, viewRecord) => {
-            if (err) {
-              console.error('조회 기록 확인 오류:', err);
-            } else {
-              const now = new Date();
-              if (!viewRecord || (now - new Date(viewRecord.viewed_at)) / (1000 * 60 * 60) >= 12) {
-                // 12시간이 지났거나 처음 조회하는 경우
-                const updateViewsSql = `
-                  INSERT OR REPLACE INTO user_views (user_id, post_id, board_id, viewed_at)
-                  VALUES (?, ?, ?, datetime('now'))
-                `;
-                db.run(updateViewsSql, [userId, currentId, boardId], (err) => {
-                  if (err) {
-                    console.error('조회 기록 업데이트 오류:', err);
-                  } else {
-                    // 기존 views 컬럼 1 증가
-                    db.run(`UPDATE ${boardId}_posts SET views = views + 1 WHERE id = ?`, [currentId]);
-                  }
-                });
-              }
-            }
-          });
+        if (userId !== 'anonymous') {
+          updateViewCount(userId, currentId, boardId);
         }
   
         res.render('postId', { 
@@ -82,6 +61,27 @@ router.get('/:boardId/:id', (req, res) => {
         });
       });
     });
-  });
+});
+
+function updateViewCount(userId, postId, boardId) {
+  const now = Date.now();
+  const cacheKey = `${userId}:${boardId}:${postId}`;
   
+  if (!viewCache[cacheKey] || now - viewCache[cacheKey] >= 5 * 60 * 1000) { // 5분 제한
+    viewCache[cacheKey] = now;
+    
+    const incrementViewsSql = `UPDATE ${boardId}_posts SET views = views + 1 WHERE id = ?`;
+    
+    db.run(incrementViewsSql, [postId], function(err) {
+      if (err) {
+        console.error('조회수 증가 오류:', err);
+      } else {
+        console.log(`조회수 업데이트 성공. 변경된 행 수: ${this.changes}`);
+      }
+    });
+  } else {
+    console.log('5분 내 재조회로 조회수가 증가하지 않았습니다.');
+  }
+}
+
 module.exports = router;
