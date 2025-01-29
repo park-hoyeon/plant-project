@@ -102,6 +102,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authorPrefix = comment.parent_id ? '(답글) ' : '';
     const indentation = comment.parent_id ? '&nbsp;'.repeat(4) : '';
   
+    const formattedContent = comment.content
+        .split('\n') // 줄바꿈 기준으로 나눔
+        .map((line, index) => {
+            // 첫 줄은 기본 들여쓰기, 이후 줄은 추가 들여쓰기
+            return index === 0 ? line : `${indentation}${line}`;
+        })
+        .join('<br>'); // 다시 <br>로 합침
+
     commentElement.innerHTML = `
       ${indentation}${authorPrefix}<span class="comment-author">${comment.author}</span> | 
       <span class="comment-date">${formattedDate}</span> | 
@@ -110,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <button class="report-button">🚨 신고</button>
       ${comment.isOwnComment ? '<button class="delete-button">🗑️ 삭제</button>' : ''}
       <br>
-      ${indentation}<span class="comment-content">${comment.content}</span><br>
+      ${indentation}<span class="comment-content">${formattedContent}</span><br>
       ${indentation}<button class="reply-button">답글</button>
       <div class="replies"></div>
     `;
