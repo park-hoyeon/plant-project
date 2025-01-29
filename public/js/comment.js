@@ -51,11 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  function addCommentToDOM(comment) {
+  function addCommentToDOM(comment, parentId = null) {
     const commentElement = document.createElement('div');
     commentElement.className = 'comment';
+    commentElement.dataset.commentId = comment.id;
     
-    // 댓글 내용의 줄바꿈(\n)을 <br> 태그로 변환
     const formattedContent = comment.content.replace(/\n/g, '<br>');
     
     commentElement.innerHTML = `
@@ -67,9 +67,64 @@ document.addEventListener('DOMContentLoaded', () => {
       <p class="comment-content">
         ${formattedContent}
       </p>
+      <button class="reply-button">답글</button>
+      <div class="replies"></div>
     `;
-    commentsList.prepend(commentElement);
+  
+    const replyButton = commentElement.querySelector('.reply-button');
+    replyButton.addEventListener('click', () => showReplyForm(comment.id));
+  
+    if (parentId) {
+      const parentComment = document.querySelector(`[data-comment-id="${parentId}"]`);
+      parentComment.querySelector('.replies').appendChild(commentElement);
+    } else {
+      commentsList.prepend(commentElement);
+    }
   }
+  
+  function showReplyForm(parentId) {
+    const replyForm = document.createElement('form');
+    replyForm.className = 'reply-form';
+    replyForm.innerHTML = `
+      <textarea name="content" placeholder="답글을 입력하세요" required></textarea>
+      <button type="submit">답글 작성</button>
+    `;
+  
+    replyForm.addEventListener('submit', (e) => handleReplySubmit(e, parentId));
+  
+    const parentComment = document.querySelector(`[data-comment-id="${parentId}"]`);
+    parentComment.appendChild(replyForm);
+  }
+  
+  async function handleReplySubmit(e, parentId) {
+    e.preventDefault();
+    const form = e.target;
+    const content = form.content.value;
+    const postId = window.location.pathname.split('/').pop();
+  
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content, postId, parentId }),
+      });
+  
+      if (response.ok) {
+        const newComment = await response.json();
+        addCommentToDOM(newComment, parentId);
+        form.remove();
+      } else {
+        const errorData = await response.json();
+        alert(`답글 작성 실패: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('답글 작성 중 오류 발생:', error);
+      alert('답글 작성 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    }
+  }
+  
   
   });
   
