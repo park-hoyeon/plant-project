@@ -58,24 +58,51 @@ module.exports = (db) => {
     });
   });
 
-  // 댓글 가져오기
   router.get('/', (req, res) => {
     const postId = req.query.postId;
-
+    const userId = req.session?.user?.ID || null;
+  
     const sql = `
-      SELECT * FROM comments 
-      WHERE post_id = ? 
-      ORDER BY created_at DESC
+      SELECT c.*, 
+             CASE WHEN c.user_id = ? THEN 1 ELSE 0 END as isOwnComment
+      FROM comments c
+      WHERE c.post_id = ?
+      ORDER BY c.parent_id NULLS FIRST, c.created_at ASC
     `;
-    
-    db.all(sql, [postId], (err, rows) => {
+  
+    db.all(sql, [userId, postId], (err, rows) => {
       if (err) {
         console.error('댓글 조회 오류:', err.message);
         return res.status(500).json({ error: '댓글 조회 중 오류가 발생했습니다.' });
       }
-      res.json(rows);
+  
+      // 댓글 계층 구조 생성
+      const commentMap = new Map();
+      const rootComments = [];
+  
+      rows.forEach(row => {
+        const comment = {
+          ...row,
+          author: row.content === '삭제된 댓글입니다.' ? '-' : row.author,
+          replies: []
+        };
+  
+        commentMap.set(comment.id, comment);
+  
+        if (comment.parent_id === null) {
+          rootComments.push(comment);
+        } else {
+          const parentComment = commentMap.get(comment.parent_id);
+          if (parentComment) {
+            parentComment.replies.push(comment);
+          }
+        }
+      });
+  
+      res.json(rootComments);
     });
   });
+  
 
   // 좋아요 기능
   router.post('/:id/like', (req, res) => {
@@ -104,6 +131,35 @@ module.exports = (db) => {
       });
     });
   });
+
+  router.post('/:id/delete', (req, res) => {
+    const commentId = req.params.id;
+    const userId = req.session?.user?.ID;
+  
+    if (!userId) {
+      return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
+  
+    const updateSql = `
+      UPDATE comments 
+      SET content = '삭제된 댓글입니다.' 
+      WHERE id = ? AND user_id = ?
+    `;
+  
+    db.run(updateSql, [commentId, userId], function(err) {
+      if (err) {
+        console.error('댓글 삭제 오류:', err.message);
+        return res.status(500).json({ error: '댓글 삭제 중 오류가 발생했습니다.' });
+      }
+  
+      if (this.changes === 0) {
+        return res.status(403).json({ error: '삭제 권한이 없습니다.' });
+      }
+  
+      res.json({ message: '댓글이 삭제되었습니다.' });
+    });
+  });
+  
 
   return router;
 };
