@@ -51,6 +51,17 @@ function createTables() {
             views INTEGER DEFAULT 0
         )`);
         db.run("DELETE FROM sqlite_sequence WHERE name='event_posts'");
+
+        db.run(`CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER, 
+            post_id INTEGER,
+            content TEXT,
+            author TEXT,
+            likes INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        
     });
 }
 

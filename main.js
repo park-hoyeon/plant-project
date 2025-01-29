@@ -26,6 +26,9 @@ app.use(session({
     }
 }));
 
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('./community.db');
+
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -48,6 +51,11 @@ async function fetchAllUsers() {
 // 글 작성으로 이동
 const realwriteRouter = require('./community/realwrite');
 app.use('/plantowner/community', realwriteRouter);
+
+//댓글 
+const commentRouter = require('./community/comment');
+app.use('/api/comments', commentRouter(db));
+
 
 // 커뮤니티 글 상세 보기 루트
 const postRouter = require('./community/postId');
@@ -117,7 +125,6 @@ app.get('/plantowner/community/:boardId/posts', (req, res) => {
     
     res.render('community', { boardId, page, posts: [] });
 });
-
 
 
 // 마이페이지: 로그인이 안 되어있다면 로그인 창으로 바로 이동. 그 외에는 마이페이지로 이동.
