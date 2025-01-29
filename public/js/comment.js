@@ -58,16 +58,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const formattedContent = comment.content.replace(/\n/g, '<br>');
     
+    const authorPrefix = comment.parent_id ? '(답글) ' : '';
+    const indentation = comment.parent_id ? '&nbsp;'.repeat(10) : ''; // 답글인 경우 10개의 공백 추가
+    
     commentElement.innerHTML = `
-      <p class="comment-header">
-        <span class="comment-author">${comment.author}</span> |
-        <span class="comment-date">${new Date(comment.created_at).toLocaleString()}</span> |
-        <span class="comment-likes">좋아요: ${comment.likes}</span>
-      </p>
-      <p class="comment-content">
-        ${formattedContent}
-      </p>
-      <button class="reply-button">답글</button>
+      ${indentation}${authorPrefix}<span class="comment-author">${comment.author}</span> |
+      <span class="comment-date">${new Date(comment.created_at).toLocaleString()}</span> |
+      <span class="comment-likes">좋아요: ${comment.likes}</span><br>
+      ${indentation}${formattedContent}<br>
+      ${indentation}<button class="reply-button">답글</button>
       <div class="replies"></div>
     `;
   
@@ -81,6 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
       commentsList.prepend(commentElement);
     }
   }
+  
+  
+  
+  
   
   function showReplyForm(parentId) {
     const replyForm = document.createElement('form');
