@@ -112,7 +112,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       ${indentation}${authorPrefix}<span class="comment-author">${comment.author}</span> | 
       <span class="comment-date">${formattedDate}</span> | 
       <span class="comment-likes">좋아요: <span class="likes-count">${comment.likes}</span></span>
-      <button class="like-button">👍</button><br>
+      <button class="like-button">👍</button>
+      <button class="report-button">🚨 신고</button><br>
       ${indentation}<span class="comment-content">${comment.content}</span><br>
       ${indentation}<button class="reply-button">답글</button>
       <div class="replies"></div>
@@ -121,6 +122,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const likeButton = commentElement.querySelector('.like-button');
     likeButton.addEventListener('click', () => handleLike(comment.id));
   
+    const reportButton = commentElement.querySelector('.report-button');
+    reportButton.addEventListener('click', () => handleReport());
+
     const replyButton = commentElement.querySelector('.reply-button');
     replyButton.addEventListener('click', () => showReplyForm(comment.id));
   
@@ -130,6 +134,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (comment.replies && comment.replies.length > 0) {
       const repliesContainer = commentElement.querySelector('.replies');
       comment.replies.forEach(reply => addCommentToDOM(reply, repliesContainer));
+    }
+  }
+
+  function handleReport() {
+    if (confirm("정말 신고하시겠습니까? 허위 신고일 경우 패널티가 부여됩니다.")) {
+      alert("신고되었습니다.");
     }
   }
   
