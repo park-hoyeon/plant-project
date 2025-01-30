@@ -7,9 +7,21 @@ html(lang="ko")
     block scripts
   body
     header
-      nav
-        ul
-          
+      nav.navbar
+        .left-menu
+          if !user
+            a(href='/') 로그인
+            a(href='/signup.html') 회원가입
+          else
+            a(href='/') 로그아웃
+          a(href='/customer-service') 고객센터
+
+        .right-menu
+          a(href='/plantowner') 로고
+          a(href='/mypage') 마이페이지
+          a(href='/plantowner/community') 커뮤니티
+          a(href='/plant-ai') 식물 AI
+          a(href='/shop') 상점
 
     main
-      block content  // 여기에 각 페이지의 내용을 삽입
+      block content
