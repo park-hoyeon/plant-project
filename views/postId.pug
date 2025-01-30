@@ -10,21 +10,13 @@ block content
     span 조회수: #{post.views} |
     span 공감수: 
       span#likes-count #{post.likes}
-      if user
-        button#like-button(data-post-id=post.id, data-board-id=boardId)
-          if isLiked
-            | 공감 취소
-          else
-            | 공감
-      else
-        | (로그인 후 공감 가능)
 
   // 두 번째 줄: 작성자와 작성일
   p 
-  span 작성자: #{post.author.split(' (')[0]}(#{post.author_id}) |
-  span 작성일: #{post.createdAt}
-  if post.updatedAt && post.updatedAt !== post.createdAt
-    span  | 수정일: #{post.updatedAt}
+    span 작성자: #{post.author.split(' (')[0]}(#{post.author_id}) |
+    span 작성일: #{post.createdAt}
+    if post.updatedAt && post.updatedAt !== post.createdAt
+      span  | 수정일: #{post.updatedAt}
 
   // 세 번째 줄: 내용
   div.content
@@ -43,15 +35,26 @@ block content
       span 다음 글이 없습니다
 
   // 상세보기 부가 버튼들
-  if user && user.ID === post.author_id
-    .button-container
+  .button-container
+    if user
+      button#like-button.button(data-post-id=post.id, data-board-id=boardId)
+        if isLiked
+          | 공감 취소
+        else
+          | 공감
+    else
+      span (로그인 후 공감 가능)
+    if user && user.ID === post.author_id
       a.button(href=`/plantowner/community/edit/${boardId}/${post.id}`) 수정
-    button.button.delete-btn(data-board-id=boardId, data-post-id=post.id) 삭제
+      button.button.delete-btn(data-board-id=boardId, data-post-id=post.id) 삭제
+    button#scrap-button.button 스크랩
+    button#share-button.button 공유
+    button#report-button.button 신고
+
 
   br
   // 게시판으로 돌아가기 버튼
   a.button(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기
-
 
   // 댓글 섹션
   include comment
@@ -60,3 +63,5 @@ block scripts
   script(src='/js/comment.js')
   script(src='/js/delete-post.js')
   script(src='/js/like-post.js')
+  script(src='/js/share-post.js')
+  script(src='/js/report-post.js')

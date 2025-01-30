@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (response.ok) {
             const data = await response.json();
             likesCount.textContent = data.likes;
-            likeButton.textContent = data.liked ? '좋아요 취소' : '좋아요';
+            likeButton.textContent = data.liked ? '공감 취소' : '공감';
           } else {
             console.error('좋아요 처리 실패');
           }
