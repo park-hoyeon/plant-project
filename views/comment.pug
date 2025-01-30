@@ -1,10 +1,14 @@
 block content
   mixin comment(comment)
-    .comment(id=`comment-${comment.id}`)
+    .comment(id=`comment-${comment.id}` data-comment-id=comment.id)
       p.comment-content= comment.content
       p.comment-author= comment.author
       p.comment-date= comment.created_at
       p.comment-likes Likes: #{comment.likes}
+      button.like-button 👍
+      button.reply-button 답글
+      if user && user.ID === comment.user_id
+        button.delete-button 🗑️ 삭제
 
   hr(style="width: 100%; height: 2px; background-color: gray; border: none; margin: 20px auto;")
   p 총 댓글 수: #{comments ? comments.length : 0}
@@ -16,12 +20,17 @@ block content
         each comment in comments
           if !comment.parent_id
             +comment(comment)
+            if comment.replies
+              .replies
+                each reply in comment.replies
+                  +comment(reply)
       else
         p 아직 댓글이 없습니다.
   
   if user
     form#comment-form
       textarea(name="content", placeholder="댓글을 입력하세요", required)
+      input(type="hidden", name="boardId", value=boardId)
       button(type="submit") 댓글 작성
   else
     p 댓글을 작성하려면 

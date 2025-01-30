@@ -3,10 +3,12 @@ const router = express.Router();
 
 module.exports = (db) => {
   // 댓글 작성
-  router.post('/', (req, res) => {
+  router.post('/:boardId', (req, res) => {
     const { content, postId, parentId } = req.body;
+    const { boardId } = req.params;
     const userId = req.session?.user?.ID || null;
     const author = req.session?.user?.nickname || '익명';
+    const commentTable = `${boardId}_comments`;
 
     if (!content || !postId) {
       return res.status(400).json({ error: '내용과 게시글 ID는 필수입니다.' });
@@ -16,7 +18,7 @@ module.exports = (db) => {
       db.run('BEGIN TRANSACTION');
 
       const checkDuplicateSql = `
-        SELECT COUNT(*) as count FROM comments
+        SELECT COUNT(*) as count FROM ${commentTable}
         WHERE user_id = ? AND post_id = ? AND content = ? AND created_at > datetime('now', '-10 seconds')
       `;
 
@@ -33,7 +35,7 @@ module.exports = (db) => {
         }
 
         const insertSql = `
-          INSERT INTO comments (user_id, post_id, content, author, likes, created_at, parent_id)
+          INSERT INTO ${commentTable} (user_id, post_id, content, author, likes, created_at, parent_id)
           VALUES (?, ?, ?, ?, 0, datetime('now'), ?)
         `;
 
@@ -59,15 +61,17 @@ module.exports = (db) => {
   });
 
   // 댓글 조회
-  router.get('/', (req, res) => {
+  router.get('/:boardId', (req, res) => {
+    const { boardId } = req.params;
     const postId = req.query.postId;
     const userId = req.session?.user?.ID || null;
     const isLoggedIn = !!userId;
+    const commentTable = `${boardId}_comments`;
   
     const sql = `
       SELECT c.*, 
              CASE WHEN c.user_id = ? THEN 1 ELSE 0 END as isOwnComment
-      FROM comments c
+      FROM ${commentTable} c
       WHERE c.post_id = ?
       ORDER BY c.parent_id NULLS FIRST, c.created_at ASC
     `;
@@ -78,7 +82,7 @@ module.exports = (db) => {
         return res.status(500).json({ error: '댓글 조회 중 오류가 발생했습니다.' });
       }
   
-      // 댓글 계층 구조 생성
+      // 댓글 계층 구조 생성 (기존 코드와 동일)
       const commentMap = new Map();
       const rootComments = [];
   
@@ -107,85 +111,80 @@ module.exports = (db) => {
       });
     });
   });
-  
 
+  // 좋아요 기능
+  router.post('/:boardId/:id/like', (req, res) => {
+    const { boardId, id: commentId } = req.params;
+    const userId = req.session?.user?.ID;
+    const commentTable = `${boardId}_comments`;
 
-// 좋아요 기능
-router.post('/:id/like', (req, res) => {
-  const commentId = req.params.id;
-  const userId = req.session?.user?.ID;
+    if (!userId) {
+      return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
 
-  if (!userId) {
-    return res.status(401).json({ error: '로그인이 필요합니다.' });
-  }
+    db.serialize(() => {
+      const getLikesSql = `
+        SELECT likes, liked_users FROM ${commentTable} WHERE id = ?
+      `;
 
-  db.serialize(() => {
-    // 댓글에서 좋아요를 누른 사용자 목록 가져오기
-    const getLikesSql = `
-      SELECT likes, liked_users FROM comments WHERE id = ?
-    `;
+      db.get(getLikesSql, [commentId], (err, row) => {
+        if (err) {
+          console.error('좋아요 상태 확인 오류:', err.message);
+          return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+        }
 
-    db.get(getLikesSql, [commentId], (err, row) => {
-      if (err) {
-        console.error('좋아요 상태 확인 오류:', err.message);
-        return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
-      }
+        if (!row) {
+          return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
+        }
 
-      if (!row) {
-        return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
-      }
+        let likedUsers = row.liked_users ? JSON.parse(row.liked_users) : [];
+        const isLiked = likedUsers.includes(userId);
 
-      let likedUsers = row.liked_users ? JSON.parse(row.liked_users) : []; // liked_users는 JSON 문자열로 저장
-      const isLiked = likedUsers.includes(userId);
+        if (isLiked) {
+          likedUsers = likedUsers.filter(id => id !== userId);
+          const updateLikesSql = `
+            UPDATE ${commentTable} SET likes = likes - 1, liked_users = ? WHERE id = ?
+          `;
 
-      if (isLiked) {
-        // 이미 좋아요를 눌렀다면 -> 좋아요 취소
-        likedUsers = likedUsers.filter(id => id !== userId); // 사용자 ID 제거
+          db.run(updateLikesSql, [JSON.stringify(likedUsers), commentId], function (err) {
+            if (err) {
+              console.error('좋아요 취소 오류:', err.message);
+              return res.status(500).json({ error: '좋아요 취소 중 오류가 발생했습니다.' });
+            }
 
-        const updateLikesSql = `
-          UPDATE comments SET likes = likes - 1, liked_users = ? WHERE id = ?
-        `;
+            res.json({ message: '좋아요가 취소되었습니다.', likes: row.likes - 1, liked: false });
+          });
+        } else {
+          likedUsers.push(userId);
+          const updateLikesSql = `
+            UPDATE ${commentTable} SET likes = likes + 1, liked_users = ? WHERE id = ?
+          `;
 
-        db.run(updateLikesSql, [JSON.stringify(likedUsers), commentId], function (err) {
-          if (err) {
-            console.error('좋아요 취소 오류:', err.message);
-            return res.status(500).json({ error: '좋아요 취소 중 오류가 발생했습니다.' });
-          }
+          db.run(updateLikesSql, [JSON.stringify(likedUsers), commentId], function (err) {
+            if (err) {
+              console.error('좋아요 추가 오류:', err.message);
+              return res.status(500).json({ error: '좋아요 추가 중 오류가 발생했습니다.' });
+            }
 
-          res.json({ message: '좋아요가 취소되었습니다.', likes: row.likes - 1, liked: false });
-        });
-      } else {
-        // 아직 좋아요를 누르지 않았다면 -> 좋아요 추가
-        likedUsers.push(userId);
-
-        const updateLikesSql = `
-          UPDATE comments SET likes = likes + 1, liked_users = ? WHERE id = ?
-        `;
-
-        db.run(updateLikesSql, [JSON.stringify(likedUsers), commentId], function (err) {
-          if (err) {
-            console.error('좋아요 추가 오류:', err.message);
-            return res.status(500).json({ error: '좋아요 추가 중 오류가 발생했습니다.' });
-          }
-
-          res.json({ message: '좋아요가 추가되었습니다.', likes: row.likes + 1, liked: true });
-        });
-      }
+            res.json({ message: '좋아요가 추가되었습니다.', likes: row.likes + 1, liked: true });
+          });
+        }
+      });
     });
   });
-});
 
   // 댓글 삭제
-  router.post('/:id/delete', (req, res) => {
-    const commentId = req.params.id;
+  router.post('/:boardId/:id/delete', (req, res) => {
+    const { boardId, id: commentId } = req.params;
     const userId = req.session?.user?.ID;
+    const commentTable = `${boardId}_comments`;
   
     if (!userId) {
       return res.status(401).json({ error: '로그인이 필요합니다.' });
     }
   
     const updateSql = `
-      UPDATE comments 
+      UPDATE ${commentTable} 
       SET content = '삭제된 댓글입니다.' 
       WHERE id = ? AND user_id = ?
     `;

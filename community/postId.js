@@ -26,17 +26,16 @@ const viewCache = {};
 router.get('/:boardId/:id', (req, res) => {
   const { boardId, id } = req.params;
   const currentId = parseInt(id);
-  const userId = req.session.user ? req.session.user.id : 'anonymous';
+  const userId = req.session.user ? req.session.user.ID : 'anonymous'; // ID로 통일
 
   // 현재 게시글 조회
   const sqlCurrent = `SELECT *, datetime(createdAt, 'localtime') as createdAt, datetime(updatedAt, 'localtime') as updatedAt FROM ${boardId}_posts WHERE id = ?`;
-
   
   // 이전 글과 다음 글의 ID 조회
   const sqlPrevNext = `
     SELECT 
-      (SELECT MIN(id) FROM ${boardId}_posts WHERE id > ?) as prevId,
-      (SELECT MAX(id) FROM ${boardId}_posts WHERE id < ?) as nextId
+      (SELECT MAX(id) FROM ${boardId}_posts WHERE id < ?) as prevId,
+      (SELECT MIN(id) FROM ${boardId}_posts WHERE id > ?) as nextId
   `;
 
   db.get(sqlCurrent, [currentId], (err, post) => {
@@ -66,31 +65,30 @@ router.get('/:boardId/:id', (req, res) => {
 
       // 댓글 조회 쿼리 수정
       const sqlComments = `
-          SELECT *
-          FROM comments
-          WHERE post_id = ?
-          ORDER BY created_at DESC
+        SELECT *
+        FROM ${boardId}_comments
+        WHERE post_id = ?
+        ORDER BY created_at DESC
       `;
-
+    
       db.all(sqlComments, [currentId], (err, comments) => {
         if (err) {
-            console.error('댓글 조회 오류:', err);
-            return res.status(500).send('서버 오류가 발생했습니다.');
+          console.error('댓글 조회 오류:', err);
+          return res.status(500).send('서버 오류가 발생했습니다.');
         }
-
+    
         res.render('postId', { 
-            post, 
-            boardId,
-            prevPostId: prevNext.prevId,
-            nextPostId: prevNext.nextId,
-            user: req.session.user,
-            comments: comments
+          post, 
+          boardId,
+          prevPostId: prevNext.prevId,
+          nextPostId: prevNext.nextId,
+          user: req.session.user,
+          comments: comments
         });
       });
     });
   });
 });
-
 
 function updateViewCount(userId, postId, boardId) {
   const now = Date.now();
@@ -118,6 +116,9 @@ router.delete('/:boardId/:id', isLoggedIn, async (req, res) => {
   const { boardId, id } = req.params;
   const userId = req.session.user ? req.session.user.ID : null;
 
+  // 댓글 테이블 이름 결정
+  const commentTable = `${boardId}_comments`;
+
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
 
@@ -133,7 +134,7 @@ router.delete('/:boardId/:id', isLoggedIn, async (req, res) => {
 
       const queries = [
         `DELETE FROM ${boardId}_posts WHERE id = ?`,
-        `DELETE FROM comments WHERE post_id = ?`,
+        `DELETE FROM ${commentTable} WHERE post_id = ?`,
         `UPDATE ${boardId}_posts SET id = id - 1 WHERE id > ?`,
         `UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM ${boardId}_posts) WHERE name = ?`
       ];
@@ -159,8 +160,5 @@ router.delete('/:boardId/:id', isLoggedIn, async (req, res) => {
     });
   });
 });
-
-
-
 
 module.exports = router;

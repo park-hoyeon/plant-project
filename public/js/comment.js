@@ -2,68 +2,69 @@ let isSubmitting = false;
 let isLoggedIn = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const commentForm = document.getElementById('comment-form');
-    const commentsList = document.getElementById('comments-list');
+  const commentForm = document.getElementById('comment-form');
+  const commentsList = document.getElementById('comments-list');
+  const boardId = getBoardIdFromUrl();
   
     // 페이지 로드 시 댓글 불러오기
     await loadComments();
   
 
-  if (commentForm) {
-    commentForm.addEventListener('submit', async function (e) {
-      e.preventDefault();
-
-      if (isSubmitting) {
-        console.log('이미 제출 중입니다.');
-        return;
-      }
-
-      isSubmitting = true;
-
-      const content = commentForm.querySelector('textarea[name="content"]').value;
-      const postId = window.location.pathname.split('/').pop();
-
-      if (!content) {
-        console.error('댓글 내용이 비어있습니다.');
-        isSubmitting = false;
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/comments', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ content, postId }),
-        });
-
-        if (response.ok) {
-          const newComment = await response.json();
-          addCommentToDOM(newComment, commentsList);
-          commentForm.reset();
-        } else {
-          const errorData = await response.json();
-          console.error('댓글 작성 실패:', errorData.error);
-          alert(`댓글 작성 실패: ${errorData.error}`);
+    if (commentForm) {
+      commentForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+    
+        if (isSubmitting) {
+          console.log('이미 제출 중입니다.');
+          return;
         }
-      } catch (error) {
-        console.error('댓글 작성 중 오류 발생:', error);
-        alert('댓글 작성 중 오류가 발생했습니다. 다시 시도해 주세요.');
-      } finally {
-        isSubmitting = false;
-      }
-    });
-  }
+    
+        isSubmitting = true;
+    
+        const content = commentForm.querySelector('textarea[name="content"]').value;
+        const postId = window.location.pathname.split('/').pop();
+    
+        if (!content) {
+          console.error('댓글 내용이 비어있습니다.');
+          isSubmitting = false;
+          return;
+        }
+    
+        try {
+          const response = await fetch(`/api/comments/${boardId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, postId }), // parentId 제거
+          });
+    
+          if (response.ok) {
+            const newComment = await response.json();
+            addCommentToDOM(newComment, commentsList);
+            commentForm.reset();
+          } else {
+            const errorData = await response.json();
+            console.error('댓글 작성 실패:', errorData.error);
+            alert(`댓글 작성 실패: ${errorData.error}`);
+          }
+        } catch (error) {
+          console.error('댓글 작성 중 오류 발생:', error);
+          alert('댓글 작성 중 오류가 발생했습니다. 다시 시도해 주세요.');
+        } finally {
+          isSubmitting = false;
+        }
+      });
+    }
+    
+
 
   async function loadComments() {
     const postId = window.location.pathname.split('/').pop();
     try {
-      const response = await fetch(`/api/comments?postId=${postId}`);
+      const response = await fetch(`/api/comments/${boardId}?postId=${postId}`);
       if (response.ok) {
         const data = await response.json();
         isLoggedIn = data.isLoggedIn; // 서버에서 받은 로그인 상태 저장
-        console.log('로그인 상태:', isLoggedIn); // 디버깅을 위해 로그 추가
+        console.log('로그인 상태:', isLoggedIn); 
         const comments = data.comments;
   
         // 댓글 리스트 초기화
@@ -139,52 +140,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function showReplyForm(parentId) {
-        const parentCommentEl = document.querySelector(`[data-comment-id="${parentId}"]`);
-        if (!parentCommentEl) return;
-    
-        let replyForm = parentCommentEl.querySelector('.reply-form');
-        if (!replyForm) {
-          replyForm = document.createElement('form');
-          replyForm.className = 'reply-form';
-          replyForm.innerHTML = `
-            <textarea name="content" placeholder="답글을 입력하세요" required></textarea>
-            <button type="submit">답글 작성</button>
-          `;
-    
-          replyForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            
-            const content = replyForm.querySelector('textarea[name="content"]').value;
-            const postId = window.location.pathname.split('/').pop();
-    
-            try {
-              const response = await fetch('/api/comments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, postId, parentId }),
-              });
-    
-              if (response.ok) {
-                const newReply = await response.json();
-                const repliesContainer = parentCommentEl.querySelector('.replies');
-                addCommentToDOM(newReply, repliesContainer);
-                replyForm.remove();
-              } else if (response.status === 401) {
-                alert('로그인이 필요합니다.');
-                window.location.href = '/';
-              } else {
-                console.error('답글 작성 실패');
-              }
-            } catch (error) {
-              console.error('답글 작성 중 오류 발생:', error);
+      const parentCommentEl = document.querySelector(`[data-comment-id="${parentId}"]`);
+      if (!parentCommentEl) return;
+  
+      let replyForm = parentCommentEl.querySelector('.reply-form');
+      if (!replyForm) {
+        replyForm = document.createElement('form');
+        replyForm.className = 'reply-form';
+        replyForm.innerHTML = `
+          <textarea name="content" placeholder="답글을 입력하세요" required></textarea>
+          <button type="submit">답글 작성</button>
+        `;
+  
+        replyForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          
+          const content = replyForm.querySelector('textarea[name="content"]').value;
+          const postId = window.location.pathname.split('/').pop();
+  
+          try {
+            const response = await fetch(`/api/comments/${boardId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content, postId, parentId }),
+            });
+  
+            if (response.ok) {
+              const newReply = await response.json();
+              const repliesContainer = parentCommentEl.querySelector('.replies');
+              addCommentToDOM(newReply, repliesContainer);
+              replyForm.remove();
+            } else if (response.status === 401) {
+              alert('로그인이 필요합니다.');
+              window.location.href = '/';
+            } else {
+              console.error('답글 작성 실패');
             }
-          });
-    
-          parentCommentEl.appendChild(replyForm);
-        } else {
-          replyForm.remove();
-        }
+          } catch (error) {
+            console.error('답글 작성 중 오류 발생:', error);
+          }
+        });
+  
+        parentCommentEl.appendChild(replyForm);
+      } else {
+        replyForm.remove();
       }
+    }
       
     
     if (comment.isOwnComment) {
@@ -205,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function handleDelete(commentId) {
     if (confirm("정말로 이 댓글을 삭제하시겠습니까?")) {
       try {
-        const response = await fetch(`/api/comments/${commentId}/delete`, {
+        const response = await fetch(`/api/comments/${boardId}/${commentId}/delete`, {
           method: 'POST',
         });
         if (response.ok) {
@@ -233,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function handleLike(commentId) {
     try {
-      const response = await fetch(`/api/comments/${commentId}/like`, { method: 'POST' });
+      const response = await fetch(`/api/comments/${boardId}/${commentId}/like`, { method: 'POST' });
   
       if (response.ok) {
         const data = await response.json();
@@ -257,4 +258,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('좋아요 처리 중 오류 발생:', error);
     }
   }
-})
+  function getBoardIdFromUrl() {
+    const pathParts = window.location.pathname.split('/');
+    return pathParts[pathParts.indexOf('community') + 1];
+  }
+});
