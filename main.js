@@ -137,6 +137,43 @@ app.get('/mypage', (req, res) => {
     res.render('mypage.pug', { user: req.session.user });
 });
 
+//내가 작성한 글 가져오기!
+async function fetchUserPosts(userId) {
+    return new Promise((resolve, reject) => {
+        const query = "SELECT * FROM free_posts WHERE author_id = ?";
+        db.all(query, [userId], (err, rows) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(rows);
+        });
+    });
+}
+
+app.get('/diary', async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/');
+    }
+
+    try {
+        // 사용자가 작성한 글을 DB에서 가져오기
+        const posts = await fetchUserPosts(req.session.user.ID);
+
+        // currentPage를 'diary'로 설정하여 템플릿에 전달
+        res.render('diary', {
+            user: req.session.user,
+            posts: posts,
+            currentPage: 'diary'  // currentPage 전달
+        });
+    } catch (error) {
+        console.error('내가 쓴 글 조회 에러:', error);
+        res.status(500).send(`글을 불러오는 중 오류가 발생했습니다. 에러: ${error.message}`);
+    }
+});
+
+
+
+
 app.post('/signup', async (req, res) => {
     const { ID, nickname, email, password, confirmPassword } = req.body;
     try {
