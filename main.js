@@ -87,7 +87,7 @@ async function updateUserPassword(ID, newPassword) {
 
 // 라우트 핸들러
 app.get('/plantowner', (req, res) => {
-    res.render('plantowner');
+    res.render('plantowner', { user: req.session.user });
 });
 
 // 기본 커뮤니티방은 자유 게시판
