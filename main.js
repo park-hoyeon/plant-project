@@ -178,6 +178,23 @@ app.get('/', (req, res) => {
         `);
     } else {
         res.status(200).send(`
+                <header>
+        <nav class="navbar">
+          <div class="left-menu">
+            <!-- 사용자가 로그인하지 않은 경우-->
+            <a href="/">로그인</a>
+            <a href="/signup.html">회원가입</a>
+            <a href="/customer-service">고객센터</a>
+          </div>
+          <div class="right-menu">
+            <a href="/plantowner">로고</a>
+            <a href="/mypage">마이페이지</a>
+            <a href="/plantowner/community">커뮤니티</a>
+            <a href="/plant-ai">식물 AI</a>
+            <a href="/shop">상점</a>
+          </div>
+        </nav>
+      </header>
             <h1>환영합니다!</h1>
             <div>
                 <h2>로그인</h2>
