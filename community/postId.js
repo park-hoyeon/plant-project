@@ -118,52 +118,43 @@ router.delete('/:boardId/:id', isLoggedIn, async (req, res) => {
   const { boardId, id } = req.params;
   const userId = req.session.user ? req.session.user.ID : null;
 
-  db.get(`SELECT author_id FROM ${boardId}_posts WHERE id = ?`, [id], (err, post) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: '서버 오류' });
-    }
-    if (!post || !userId || post.author_id !== userId.toString()) {
-      return res.status(403).json({ error: '삭제 권한이 없습니다.' });
-    }
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
 
-    db.run('BEGIN TRANSACTION', (err) => {
+    db.get(`SELECT author_id FROM ${boardId}_posts WHERE id = ?`, [id], (err, post) => {
       if (err) {
-        console.error(err);
-        return res.status(500).json({ error: '트랜잭션 시작 오류' });
+        db.run('ROLLBACK');
+        return res.status(500).json({ error: '서버 오류' });
+      }
+      if (!post || !userId || post.author_id !== userId.toString()) {
+        db.run('ROLLBACK');
+        return res.status(403).json({ error: '삭제 권한이 없습니다.' });
       }
 
-      db.run(`DELETE FROM ${boardId}_posts WHERE id = ?`, [id], (err) => {
-        if (err) {
-          console.error(err);
-          db.run('ROLLBACK');
-          return res.status(500).json({ error: '삭제 중 오류 발생' });
-        }
+      const queries = [
+        `DELETE FROM ${boardId}_posts WHERE id = ?`,
+        `DELETE FROM comments WHERE post_id = ?`,
+        `UPDATE ${boardId}_posts SET id = id - 1 WHERE id > ?`,
+        `UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM ${boardId}_posts) WHERE name = ?`
+      ];
 
-        db.run(`UPDATE ${boardId}_posts SET id = id - 1 WHERE id > ?`, [id], (err) => {
+      queries.forEach((query, index) => {
+        db.run(query, index < 3 ? [id] : [`${boardId}_posts`], (err) => {
           if (err) {
             console.error(err);
             db.run('ROLLBACK');
-            return res.status(500).json({ error: 'ID 업데이트 중 오류 발생' });
+            return res.status(500).json({ error: '삭제 중 오류 발생' });
           }
-
-          db.run(`UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM ${boardId}_posts) WHERE name = ?`, [`${boardId}_posts`], (err) => {
-            if (err) {
-              console.error(err);
-              db.run('ROLLBACK');
-              return res.status(500).json({ error: 'Sequence 업데이트 중 오류 발생' });
-            }
-
-            db.run('COMMIT', (err) => {
-              if (err) {
-                console.error(err);
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: '트랜잭션 커밋 중 오류 발생' });
-              }
-              res.json({ success: true });
-            });
-          });
         });
+      });
+
+      db.run('COMMIT', (err) => {
+        if (err) {
+          console.error(err);
+          db.run('ROLLBACK');
+          return res.status(500).json({ error: '트랜잭션 커밋 중 오류 발생' });
+        }
+        res.json({ success: true });
       });
     });
   });
