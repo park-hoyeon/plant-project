@@ -112,8 +112,6 @@ router.get('/:boardId/write', isLoggedIn, (req, res) => {
     });
 });
 
-
-// 글 작성 처리 (로그인 필요)
 // 글 작성 처리 (로그인 필요)
 router.post('/:boardId/post', isLoggedIn, (req, res) => {
     const { boardId } = req.params;

@@ -63,9 +63,10 @@ router.post('/:boardId/:postId', isLoggedIn, isAuthor, async (req, res) => {
   let { title, content, tag } = req.body;
   
   content = content.replace(/\n/g, '<br>');
+  const updatedAt = new Date().toISOString();
   
-  db.run(`UPDATE ${boardId}_posts SET title = ?, content = ?, tag = ? WHERE id = ?`, 
-    [title, content, tag, postId], (err) => {
+  db.run(`UPDATE ${boardId}_posts SET title = ?, content = ?, tag = ?, updatedAt = ? WHERE id = ?`, 
+    [title, content, tag, updatedAt, postId], (err) => {
     if (err) {
       console.error(err);
       return res.status(500).send('서버 오류');

@@ -12,9 +12,10 @@ block content
 
   // 두 번째 줄: 작성자와 작성일
   p 
-    span 작성자: #{post.author.split(' (')[0]}(#{post.author_id}) |
-    span 작성일: #{post.createdAt}
-
+  span 작성자: #{post.author.split(' (')[0]}(#{post.author_id}) |
+  span 작성일: #{post.createdAt}
+  if post.updatedAt && post.updatedAt !== post.createdAt
+    span  | 수정일: #{post.updatedAt}
   // 세 번째 줄: 내용
   div.content
     p!= post.content
@@ -35,8 +36,9 @@ block content
   if user && user.ID === post.author_id
     .button-container
       a.button(href=`/plantowner/community/edit/${boardId}/${post.id}`) 수정
+    button.button.delete-btn(data-board-id=boardId, data-post-id=post.id) 삭제
 
-
+  br
   // 게시판으로 돌아가기 버튼
   a.button(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기
 
@@ -46,3 +48,4 @@ block content
   
 block scripts
   script(src='/js/comment.js')
+  script(src='/js/delete-post.js')

@@ -4,6 +4,14 @@ const sqlite3 = require('sqlite3').verbose();
 
 const dbPath = './community.db';
 
+const isLoggedIn = (req, res, next) => {
+  if (req.session && req.session.user) {
+    next();
+  } else {
+    res.status(401).json({ error: '로그인이 필요합니다.' });
+  }
+};
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('SQLite 데이터베이스 연결 오류:', err.message);
@@ -15,14 +23,14 @@ const db = new sqlite3.Database(dbPath, (err) => {
 // 조회 기록을 저장할 객체
 const viewCache = {};
 
-
 router.get('/:boardId/:id', (req, res) => {
   const { boardId, id } = req.params;
   const currentId = parseInt(id);
   const userId = req.session.user ? req.session.user.id : 'anonymous';
 
   // 현재 게시글 조회
-  const sqlCurrent = `SELECT * FROM ${boardId}_posts WHERE id = ?`;
+  const sqlCurrent = `SELECT *, datetime(createdAt, 'localtime') as createdAt, datetime(updatedAt, 'localtime') as updatedAt FROM ${boardId}_posts WHERE id = ?`;
+
   
   // 이전 글과 다음 글의 ID 조회
   const sqlPrevNext = `
@@ -104,5 +112,64 @@ function updateViewCount(userId, postId, boardId) {
     console.log('1시간 내 재조회로 조회수가 증가하지 않았습니다.');
   }
 }
+
+// 삭제 라우터
+router.delete('/:boardId/:id', isLoggedIn, async (req, res) => {
+  const { boardId, id } = req.params;
+  const userId = req.session.user ? req.session.user.ID : null;
+
+  db.get(`SELECT author_id FROM ${boardId}_posts WHERE id = ?`, [id], (err, post) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: '서버 오류' });
+    }
+    if (!post || !userId || post.author_id !== userId.toString()) {
+      return res.status(403).json({ error: '삭제 권한이 없습니다.' });
+    }
+
+    db.run('BEGIN TRANSACTION', (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: '트랜잭션 시작 오류' });
+      }
+
+      db.run(`DELETE FROM ${boardId}_posts WHERE id = ?`, [id], (err) => {
+        if (err) {
+          console.error(err);
+          db.run('ROLLBACK');
+          return res.status(500).json({ error: '삭제 중 오류 발생' });
+        }
+
+        db.run(`UPDATE ${boardId}_posts SET id = id - 1 WHERE id > ?`, [id], (err) => {
+          if (err) {
+            console.error(err);
+            db.run('ROLLBACK');
+            return res.status(500).json({ error: 'ID 업데이트 중 오류 발생' });
+          }
+
+          db.run(`UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM ${boardId}_posts) WHERE name = ?`, [`${boardId}_posts`], (err) => {
+            if (err) {
+              console.error(err);
+              db.run('ROLLBACK');
+              return res.status(500).json({ error: 'Sequence 업데이트 중 오류 발생' });
+            }
+
+            db.run('COMMIT', (err) => {
+              if (err) {
+                console.error(err);
+                db.run('ROLLBACK');
+                return res.status(500).json({ error: '트랜잭션 커밋 중 오류 발생' });
+              }
+              res.json({ success: true });
+            });
+          });
+        });
+      });
+    });
+  });
+});
+
+
+
 
 module.exports = router;

@@ -235,7 +235,7 @@ app.post('/login', async (req, res) => {
             return res.json({ success: false, message: "비밀번호가 틀렸습니다." });
         }
         req.session.user = { 
-            id: user.id, // 사용자의 고유 ID를 저장
+            id: user.id,
             ID: user.ID, 
             nickname: user.nickname 
         };
