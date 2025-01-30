@@ -1,0 +1,24 @@
+
+extends layout
+
+block content
+  .container
+    h1 마이 페이지
+
+    .profile
+      h2 내 정보
+      p 이름: #{user.nickname}  
+
+    .community
+      h2 커뮤니티 카테고리
+      ul
+        li
+          a(href='/diary') 내가 쓴 글
+        li
+          a(href='/comment') 내가 쓴 댓글
+        li
+          a(href='/scraps') 스크랩한 글
+
+    .mywrite 
+        h2 내가 쓴 글
+        ul   

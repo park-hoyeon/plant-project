@@ -1,0 +1,49 @@
+extends layout
+
+block content
+  .container
+    h1 마이 페이지
+
+    .profile
+      h2 내 정보
+      p 이름: #{user.nickname}  
+
+    .community
+      h2 커뮤니티 카테고리
+      ul
+        li
+          a(href='/diary') 내가 쓴 글
+        li
+          a(href='/comment') 내가 쓴 댓글
+        li
+          a(href='/scraps') 스크랩한 글
+
+    .my-posts
+      h2 내가 쓴 글
+      if posts.length > 0
+        ul
+          each post in posts
+            li
+              a(href=`/diary/${post.id}`) #{post.title}
+      else
+        p 작성한 글이 없습니다.
+
+    .my-comments
+      h2 내가 쓴 댓글
+      if comments.length > 0
+        ul
+          each comment in comments
+            li
+              a(href=`/diary/${comment.postId}`) #{comment.content} (#{comment.date})
+      else
+        p 작성한 댓글이 없습니다.
+
+    .my-scraps
+      h2 스크랩한 글
+      if scraps.length > 0
+        ul
+          each scrap in scraps
+            li
+              a(href=`/diary/${scrap.id}`) #{scrap.title}
+      else
+        p 스크랩한 글이 없습니다.

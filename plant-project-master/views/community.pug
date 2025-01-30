@@ -1,0 +1,58 @@
+html
+  head
+    title #{boardName} - 커뮤니티
+  body
+    h1 #{boardName}
+    
+    // 게시판 네비게이션
+    nav
+      a(href="/plantowner/community/free") 자유게시판
+      a(href="/plantowner/community/plant") 식물 토크
+      a(href="/plantowner/community/event") 이벤트
+    
+    // 게시글 목록
+    if posts && posts.length > 0
+      table
+        thead
+          tr
+            th 제목
+            th 작성자
+            th 작성일
+        tbody
+          each post in posts
+            tr
+              td
+                a(href=`/plantowner/community/${boardId}/${post._id}`) #{post.title}
+              td= post.author
+              td= post.createdAt.toLocaleDateString()
+    else
+      p 게시글이 없습니다.
+
+// 페이지네이션
+div.pagination
+  a(href=`/plantowner/community/${boardId}?page=${currentPage > 1 ? currentPage - 1 : 1}&query=${searchQuery || ''}`) 이전
+  
+  span.current 1
+  
+  if totalPages > 1
+    - for (let i = 2; i <= Math.min(5, totalPages); i++)
+      if i === currentPage
+        span.current #{i}
+      else
+        a(href=`/plantowner/community/${boardId}?page=${i}&query=${searchQuery || ''}`) #{i}
+  
+  a(href=`/plantowner/community/${boardId}?page=${currentPage < totalPages ? currentPage + 1 : totalPages}&query=${searchQuery || ''}`) 다음
+
+// 글 작성 버튼
+a(href=`/plantowner/community/${boardId}/write` class="write-button") 글 작성
+
+// 검색 폼
+form(action=`/plantowner/community/${boardId}` method="GET")
+  if boardId === 'free'
+    input(type="text" name="query" placeholder="자유 게시판 검색 - 2글자 이상 입력" minlength="2" required value=searchQuery)
+  else if boardId === 'plant'
+    input(type="text" name="query" placeholder="식물 토크 검색 - 2글자 이상 입력" minlength="2" required value=searchQuery)
+  else if boardId === 'event'
+    input(type="text" name="query" placeholder="이벤트 검색 - 2글자 이상 입력" minlength="2" required value=searchQuery)
+  button(type="submit") 검색
+
