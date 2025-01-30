@@ -173,6 +173,69 @@ app.get('/diary', async (req, res) => {
 
 
 
+// 내가 작성한 댓글 가져오기!
+async function fetchUserComments(userId) {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT free_comments.*, free_posts.title AS postTitle, free_posts.id AS postId
+            FROM free_comments
+            JOIN free_posts ON free_comments.post_id = free_posts.id
+            WHERE free_comments.user_id = ?`;  // 댓글을 단 글의 제목을 가져오기 위한 JOIN
+        db.all(query, [userId], (err, rows) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(rows);
+        });
+    });
+}
+
+app.get('/comments', async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/');
+    }
+
+    try {
+        // 사용자가 작성한 댓글을 DB에서 가져오기
+        const comments = await fetchUserComments(req.session.user.ID);
+
+        // currentPage를 'comments'로 설정하여 템플릿에 전달
+        res.render('comments', {
+            user: req.session.user,
+            comments: comments,
+            currentPage: 'comments'  // currentPage 전달
+        });
+    } catch (error) {
+        console.error('내가 작성한 댓글 조회 에러:', error);
+        res.status(500).send(`댓글을 불러오는 중 오류가 발생했습니다. 에러: ${error.message}`);
+    }
+});
+
+
+
+app.get('/comments', async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/');
+    }
+
+    try {
+        // 사용자가 작성한 댓글과 댓글이 달린 글 제목을 DB에서 가져오기
+        const comments = await fetchUserComments(req.session.user.ID);
+
+        res.render('comments', {
+            user: req.session.user,
+            comments: comments,
+            currentPage: 'comments'  // currentPage 전달
+        });
+    } catch (error) {
+        console.error('내가 작성한 댓글 조회 에러:', error);
+        res.status(500).send(`댓글을 불러오는 중 오류가 발생했습니다. 에러: ${error.message}`);
+    }
+});
+
+
+
+
 
 app.post('/signup', async (req, res) => {
     const { ID, nickname, email, password, confirmPassword } = req.body;

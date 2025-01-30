@@ -1,0 +1,35 @@
+extends layout
+
+block content
+  .container
+    h1 마이 페이지
+
+    .profile
+      h2 내 정보
+      p 이름: #{user.nickname}
+
+    .community
+      h2 커뮤니티 카테고리
+      ul
+        li
+          a(href='/diary') 내가 쓴 글
+        li
+          a(href='/comments') 내가 쓴 댓글
+        li
+          a(href='/scraps') 스크랩한 글
+
+    if currentPage === 'comments'
+      .my-comments
+        h2 내가 작성한 댓글 목록
+        if comments.length > 0
+          ul
+            each comment in comments
+              li
+                // 댓글을 클릭하면 해당 글로 이동
+                a(href=`/plantowner/community/free/${comment.postId}`) 
+                  | 글 제목: #{comment.postTitle} - 댓글: #{comment.content} 
+                span.date 
+                  if comment.createdAt
+                    | #{comment.createdAt.split(' ')[0]} 
+        else
+          p No comments found.
