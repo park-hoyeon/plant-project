@@ -63,6 +63,10 @@ router.get('/:boardId/:id', (req, res) => {
         updateViewCount(userId, currentId, boardId);
       }
 
+      // 좋아요 정보 
+      const likedUsers = JSON.parse(post.liked_users || '[]');
+      post.isLiked = userId !== 'anonymous' && likedUsers.includes(userId);
+
       // 댓글 조회 쿼리 수정
       const sqlComments = `
         SELECT *
@@ -83,7 +87,8 @@ router.get('/:boardId/:id', (req, res) => {
           prevPostId: prevNext.prevId,
           nextPostId: prevNext.nextId,
           user: req.session.user,
-          comments: comments
+          comments: comments,
+          isLiked: post.isLiked
         });
       });
     });
@@ -160,5 +165,46 @@ router.delete('/:boardId/:id', isLoggedIn, async (req, res) => {
     });
   });
 });
+
+// 좋아요 라우터
+router.post('/:boardId/:id/like', isLoggedIn, (req, res) => {
+  const { boardId, id } = req.params;
+  const userId = req.session.user.ID;
+
+  db.get(`SELECT likes, liked_users FROM ${boardId}_posts WHERE id = ?`, [id], (err, post) => {
+    if (err) {
+      return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+    if (!post) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    let likedUsers = JSON.parse(post.liked_users || '[]');
+    const userIndex = likedUsers.indexOf(userId);
+
+    if (userIndex === -1) {
+      // 좋아요 추가
+      likedUsers.push(userId);
+      db.run(`UPDATE ${boardId}_posts SET likes = likes + 1, liked_users = ? WHERE id = ?`, 
+        [JSON.stringify(likedUsers), id], (err) => {
+          if (err) {
+            return res.status(500).json({ error: '좋아요 추가 중 오류가 발생했습니다.' });
+          }
+          res.json({ likes: post.likes + 1, liked: true });
+        });
+    } else {
+      // 좋아요 취소
+      likedUsers.splice(userIndex, 1);
+      db.run(`UPDATE ${boardId}_posts SET likes = likes - 1, liked_users = ? WHERE id = ?`, 
+        [JSON.stringify(likedUsers), id], (err) => {
+          if (err) {
+            return res.status(500).json({ error: '좋아요 취소 중 오류가 발생했습니다.' });
+          }
+          res.json({ likes: post.likes - 1, liked: false });
+        });
+    }
+  });
+});
+
 
 module.exports = router;
