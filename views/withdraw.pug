@@ -1,0 +1,10 @@
+doctype html
+html
+  head
+    title 회원 탈퇴
+  body
+    h1 회원 탈퇴
+    p 정말로 탈퇴하시겠습니까? 탈퇴 후에는 복구할 수 없습니다.
+    form(action="/withdraw", method="POST")
+      button(type="submit") 탈퇴
+    a(href="/mypage") 마이페이지로 돌아가기

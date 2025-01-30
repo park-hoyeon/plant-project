@@ -264,6 +264,53 @@ app.post('/login', async (req, res) => {
     }
 });
 
+app.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('로그아웃 중 오류 발생:', err);
+            return res.status(500).json({ success: false, message: '로그아웃 중 오류가 발생했습니다.' });
+        }
+        res.redirect('/'); // 로그아웃 후 메인 페이지로 이동
+    });
+});
+
+
+// 회원 탈퇴
+app.get('/withdraw', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/');
+    }
+    
+    res.render('withdraw', { user: req.session.user });
+});
+
+app.post('/withdraw', async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/');
+    }
+    
+    const { ID } = req.session.user;
+    try {
+        // 사용자 정보 삭제하기기
+        const users = await fetchAllUsers();
+        const updatedUsers = users.filter(user => user.ID !== ID);
+        await fs.writeFile(USERS_JSON_FILENAME, JSON.stringify(updatedUsers));
+
+        // 세션 종료하기
+        req.session.destroy((err) => {
+            if (err) {
+                console.error('세션 종료 중 오류 발생:', err);
+                return res.status(500).json({ success: false, message: '회원 탈퇴 처리 중 오류가 발생했습니다.' });
+            }
+            res.redirect('/'); // 탈퇴 후 메인 페이지로 이동
+        });
+    } catch (error) {
+        console.error('회원 탈퇴 처리 중 오류 발생:', error);
+        res.status(500).json({ success: false, message: '회원 탈퇴 처리 중 오류가 발생했습니다.' });
+    }
+});
+
+
 app.post('/IDfind', async (req, res) => {
     const { email } = req.body;
     try {
