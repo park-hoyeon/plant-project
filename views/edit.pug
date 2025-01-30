@@ -1,0 +1,17 @@
+extends layout
+
+block content
+  h1 게시글 수정
+  form(action=`/plantowner/community/edit/${boardId}/${post.id}` method="POST")
+    div
+      label(for="title") 제목:
+      input(type="text" id="title" name="title" value=post.title)
+    div
+      label(for="tag") 태그:
+      select(id="tag" name="tag")
+        each tagOption in tagOptions
+          option(value=tagOption, selected=tagOption===post.tag)= tagOption
+    div
+      label(for="content") 내용:
+      textarea(id="content" name="content" rows="10")= post.content
+    button(type="submit") 수정 완료

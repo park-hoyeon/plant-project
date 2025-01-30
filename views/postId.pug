@@ -12,7 +12,7 @@ block content
 
   // 두 번째 줄: 작성자와 작성일
   p 
-    span 작성자: #{post.author} |
+    span 작성자: #{post.author.split(' (')[0]}(#{post.author_id}) |
     span 작성일: #{post.createdAt}
 
   // 세 번째 줄: 내용
@@ -31,8 +31,15 @@ block content
     else
       span 다음 글이 없습니다
 
+  // 상세보기 부가 버튼들
+  if user && user.ID === post.author_id
+    .button-container
+      a.button(href=`/plantowner/community/edit/${boardId}/${post.id}`) 수정
+
+
   // 게시판으로 돌아가기 버튼
-  a(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기
+  a.button(href=`/plantowner/community/${boardId}`) 게시판으로 돌아가기
+
 
   // 댓글 섹션
   include comment

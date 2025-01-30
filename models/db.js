@@ -20,6 +20,7 @@ function createTables() {
             content TEXT NOT NULL,
             author TEXT NOT NULL,
             tag TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             likes INTEGER DEFAULT 0,
             views INTEGER DEFAULT 0
@@ -33,6 +34,7 @@ function createTables() {
             content TEXT NOT NULL,
             author TEXT NOT NULL,
             tag TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             likes INTEGER DEFAULT 0,
             views INTEGER DEFAULT 0
@@ -45,6 +47,7 @@ function createTables() {
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             author TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
             tag TEXT NOT NULL,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             likes INTEGER DEFAULT 0,

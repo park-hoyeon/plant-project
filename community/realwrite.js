@@ -21,6 +21,7 @@ function createTables() {
             content TEXT NOT NULL,
             tag TEXT NOT NULL,
             author TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
         db.run("DELETE FROM sqlite_sequence WHERE name='free_posts'");
@@ -32,6 +33,7 @@ function createTables() {
             content TEXT NOT NULL,
             tag TEXT NOT NULL,
             author TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
         db.run("DELETE FROM sqlite_sequence WHERE name='plant_posts'");
@@ -43,6 +45,7 @@ function createTables() {
             content TEXT NOT NULL,
             tag TEXT NOT NULL,
             author TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
         db.run("DELETE FROM sqlite_sequence WHERE name='event_posts'");
@@ -111,6 +114,7 @@ router.get('/:boardId/write', isLoggedIn, (req, res) => {
 
 
 // 글 작성 처리 (로그인 필요)
+// 글 작성 처리 (로그인 필요)
 router.post('/:boardId/post', isLoggedIn, (req, res) => {
     const { boardId } = req.params;
     let { title, content, tag } = req.body;
@@ -119,22 +123,32 @@ router.post('/:boardId/post', isLoggedIn, (req, res) => {
         return res.status(400).send('유효하지 않은 태그입니다.');
     }
 
-    // 줄바꿈을 <br> 태그로 변환
     content = content.replace(/\r\n|\r|\n/g, '<br>');
 
-    const author = req.session.user.nickname;
+    if (!req.session.user || !req.session.user.ID) {
+        console.error('세션에 사용자 정보가 없습니다:', req.session);
+        return res.status(401).send('로그인이 필요합니다.');
+    }
+
+    const author = `${req.session.user.nickname} (${req.session.user.ID})`;
+    const author_id = req.session.user.ID;
+
     const tableName = `${boardId}_posts`;
 
-    const sql = `INSERT INTO ${tableName} (title, content, tag, author) VALUES (?, ?, ?, ?)`;
-    db.run(sql, [title, content, tag, author], function(err) {
+    const sql = `INSERT INTO ${tableName} (title, content, tag, author, author_id) VALUES (?, ?, ?, ?, ?)`;
+    db.run(sql, [title, content, tag, author, author_id], function(err) {
         if (err) {
             console.error('게시글 저장 오류:', err.message);
             return res.status(500).send(`게시글 저장 중 오류가 발생했습니다: ${err.message}`);
         }
         console.log('저장된 게시글 ID:', this.lastID);
+        console.log('저장된 author_id:', author_id);
         res.redirect(`/plantowner/community/${boardId}`);
     });
 });
+
+
+
 
 
 

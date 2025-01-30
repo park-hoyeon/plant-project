@@ -56,7 +56,6 @@ app.use('/plantowner/community', realwriteRouter);
 const commentRouter = require('./community/comment');
 app.use('/api/comments', commentRouter(db));
 
-
 // 커뮤니티 글 상세 보기 루트
 const postRouter = require('./community/postId');
 app.use('/plantowner/community', postRouter);
@@ -126,6 +125,9 @@ app.get('/plantowner/community/:boardId/posts', (req, res) => {
     res.render('community', { boardId, page, posts: [] });
 });
 
+// 수정 이동 라우터
+const editRouter = require('./community/edit');
+app.use('/plantowner/community/edit', editRouter);
 
 // 마이페이지: 로그인이 안 되어있다면 로그인 창으로 바로 이동. 그 외에는 마이페이지로 이동.
 app.get('/mypage', (req, res) => {
@@ -232,6 +234,11 @@ app.post('/login', async (req, res) => {
         if (password !== user.password) {
             return res.json({ success: false, message: "비밀번호가 틀렸습니다." });
         }
+        req.session.user = { 
+            id: user.id, // 사용자의 고유 ID를 저장
+            ID: user.ID, 
+            nickname: user.nickname 
+        };
         req.session.user = { ID: user.ID, nickname: user.nickname };
         res.json({ success: true, message: "로그인 성공" });
     } catch (error) {
